@@ -15,8 +15,10 @@ linked models, and a cache folder. A few environment variables change where it l
 | `RVT_PRT_MODELS_GB` | The memory the models of a print may take together. Over it, the sheets are drawn in groups, each with only the models its sheets show (see [Performance](performance.md#many-linked-models)) | half the free memory, less a reserve |
 | `RVT_PRT_GEOMETRY_JOBS` | Models and links whose caches are built at once on a first print. `0` means as many as cores and free memory allow, `1` one at a time | `0` |
 
-Two more, `RVT_PRT_CORPUS` and `RVT_PRT_CMP`, are read only by the benchmark tools in
-`rvt_prt.metrics` (a folder of test files, and a working folder for comparing rvt-rs builds).
+Three more, `RVT_PRT_CORPUS`, `RVT_PRT_CMP` and `RVT_PRT_BENCH_RECORD`, are read only by the
+benchmark tools in `rvt_prt.metrics` (a folder of test files, a working folder for comparing
+rvt-rs builds, and `1` to log a print in a clone to the committed `bench/prints.jsonl` rather than
+the untracked `bench/prints.local.jsonl`).
 
 ## Fonts
 

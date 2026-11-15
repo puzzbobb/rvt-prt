@@ -1,7 +1,7 @@
 # Performance and memory
 
 All figures on this page are from the development machine: a small ARM64 single-board computer
-with 4 cores and 8 GB. A desktop is several times faster. Every print in a clone is recorded in `bench/prints.jsonl`.
+with 4 cores and 8 GB. A desktop is several times faster. Every print in a clone is recorded in `bench/prints.local.jsonl` (not tracked), and the prints behind these figures in `bench/prints.jsonl`.
 
 ## Cold and warm prints
 

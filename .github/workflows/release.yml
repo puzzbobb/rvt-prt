@@ -1,0 +1,158 @@
+# Prebuilt packages, so that installing rvt-prt needs no Rust toolchain.
+#
+# The extension is built for the stable ABI (abi3, Python 3.10 and newer), so one wheel per
+# platform serves every Python version. On a `vX.Y.Z` tag: the wheels and the sdist are built,
+# each wheel is installed on a clean runner and run, then the packages go to TestPyPI, are
+# installed from there, and go to PyPI and a GitHub release (docs/project.md, "How a release
+# is made"). Run by hand (workflow_dispatch), it only builds and checks, and keeps the packages
+# as the run's artifacts.
+#
+# Publishing uses PyPI's trusted publishing: no token is stored. Before the first release, add
+# this repository and workflow (release.yml) as a trusted publisher on PyPI and TestPyPI, with
+# the environments `testpypi` and `pypi`. Requiring a reviewer on the `pypi` environment makes
+# the last step wait for a person.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    # The tag, pyproject.toml and native/Cargo.toml must name the same version.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Versions agree
+        run: |
+          py=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml | head -1)
+          rs=$(sed -n 's/^version = "\(.*\)"/\1/p' native/Cargo.toml | head -1)
+          echo "pyproject.toml $py, native/Cargo.toml $rs, ref $GITHUB_REF_NAME"
+          test "$py" = "$rs"
+          if [ "$GITHUB_REF_TYPE" = tag ]; then test "$GITHUB_REF_NAME" = "v$py"; fi
+
+  wheels:
+    needs: version
+    name: wheel ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-x86_64, runner: ubuntu-latest, target: x86_64, manylinux: "2_28", test: true }
+          - { name: linux-aarch64, runner: ubuntu-24.04-arm, target: aarch64, manylinux: "2_28", test: true }
+          - { name: macos-arm64, runner: macos-latest, target: aarch64-apple-darwin, test: true }
+          # built on the Apple-silicon runner, so it is not run here
+          - { name: macos-x86_64, runner: macos-latest, target: x86_64-apple-darwin, test: false }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Build
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux || 'auto' }}
+          args: --release --out dist
+      - name: The wheel installs and runs (Python 3.10, the oldest supported)
+        if: matrix.test
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - if: matrix.test
+        working-directory: ${{ runner.temp }}  # away from the clone's src/, so the wheel is what is imported
+        run: |
+          python -m venv venv
+          venv/bin/pip install "$GITHUB_WORKSPACE"/dist/*.whl
+          venv/bin/python -I -c "import rvt_prt._native, rvt_prt; print(rvt_prt.__version__)"
+          venv/bin/rvt-prt --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.name }}
+          path: dist/*.whl
+          if-no-files-found: error
+
+  sdist:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  testpypi:
+    if: github.ref_type == 'tag'
+    needs: [wheels, sdist]
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  testpypi-install:
+    # installed from TestPyPI on a clean runner; the dependencies come from PyPI
+    needs: testpypi
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install from TestPyPI
+        run: |
+          v=${GITHUB_REF_NAME#v}
+          for i in 1 2 3 4 5; do  # the index can take a minute to list a new upload
+            pip install --index-url https://test.pypi.org/simple/ \
+              --extra-index-url https://pypi.org/simple/ --only-binary rvt-prt "rvt-prt==$v" && break
+            sleep 30
+          done
+          rvt-prt --version | grep -F "$v"
+
+  pypi:
+    needs: testpypi-install
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    needs: pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Release with the packages attached
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "$GITHUB_REF_NAME" dist/*
+          --repo "$GITHUB_REPOSITORY" --title "rvt-prt ${GITHUB_REF_NAME#v}"
+          --notes "Changes: https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/CHANGELOG.md"

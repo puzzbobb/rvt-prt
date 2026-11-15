@@ -18,3 +18,5 @@ wheelhouse/
 # the family bench's latest table and records (bench/families.*), rewritten on every run
 bench/families.md
 bench/families.jsonl
+# every print's timing (metrics/bench.py); bench/prints.jsonl is the committed record
+bench/prints.local.jsonl

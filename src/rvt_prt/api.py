@@ -513,7 +513,7 @@ class RevitModel:
                         dxf.write(d, f)
                         written.append(f)
 
-        if fmt == "pdf":  # bench/prints.jsonl tracks print times
+        if fmt == "pdf":  # bench/prints*.jsonl track print times
             rec, prev = timer.record()
         else:
             rec, prev = {"total": round(time.perf_counter() - t0, 2), "peak_mb": None, "stages": dict(timer.stages)}, None
