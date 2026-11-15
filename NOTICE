@@ -1,0 +1,52 @@
+rvt-prt — print Autodesk Revit sheets to vector PDF from the .rvt file
+Copyright 2026 The rvt-prt authors
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+==============================================================================
+Third-party code
+==============================================================================
+
+Parts of this product are ported to Python from rvt-rs
+(https://github.com/DrunkOnJava/rvt-rs), licensed under the Apache License,
+Version 2.0:
+
+    rvt-rs — open reader for Autodesk Revit files
+    Copyright 2026 Griffin Long
+
+The ported parts are the container reader and stream decompression
+(rvt_prt/core/container.py), the class registry
+(rvt_prt/core/registry.py), the partition segment framing and object-graph
+decoder (rvt_prt/core/objgraph.py), and the saved-graphics surface and
+edge-loop evaluation (rvt_prt/elements/savedgraphics.py). They were
+modified in the porting.
+
+rvt-rs itself is compiled into this product's native extension
+(rvt_prt._native, from the rvt crate on crates.io), so binary
+distributions of this product contain rvt-rs object code. rvt-rs's own
+NOTICE, reproduced in native/NOTICE-rvt-rs (from the pinned release),
+applies to that code. The Rust crates linked into the extension are
+listed with their licenses in THIRD_PARTY_LICENSES where a binary distribution includes one.
+
+==============================================================================
+Runtime dependencies (not distributed with this product)
+==============================================================================
+
+  PyMuPDF       — GNU AGPL-3.0, or a commercial license from Artifex
+  numpy         — BSD-3-Clause
+  shapely       — BSD-3-Clause
+  olefile       — BSD-2-Clause
+  fontTools     — MIT
+  ezdxf         — MIT (optional)
+
+PyMuPDF's AGPL terms apply to a program that combines it with this
+product when that program is distributed or offered over a network,
+unless a commercial PyMuPDF license is held.
+
+==============================================================================
+Trademarks
+==============================================================================
+
+"Autodesk" and "Revit" are registered trademarks of Autodesk, Inc. This
+product is not affiliated with, endorsed by, or sponsored by Autodesk. The
+names are used only to identify the file format this product reads.
