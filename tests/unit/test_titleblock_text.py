@@ -60,15 +60,44 @@ def test_rtf_named_characters_and_line_breaks_are_read():
 
 
 def test_runs_wrap_where_the_plain_line_wraps_each_keeping_its_font():
-    from rvt_prt.render.text import wrap, wrap_runs
+    # Whichever font files are installed: bold may be wider than regular, so a line of mixed runs
+    # need not break where the same line all in regular does. What holds with any font is checked.
+    from rvt_prt.render.text import text_len, wrap, wrap_runs
     regular, bold = ("Trebuchet MS", False, False), ("Trebuchet MS", True, False)
     runs = [("Ensure that Positioning is set to: ", regular), ("Auto – Internal Origin to Internal Origin", bold),
             (" and then click Open.", regular)]
     plain = "".join(t for t, _f in runs)
-    for width in (120, 200, 300, 600):
-        got = wrap_runs(runs, width, 9.5)
-        assert ["".join(t for t, _f in line) for line in got] == wrap(plain, width, 9.5, regular)
-    first = wrap_runs(runs, 300, 9.5)[0]
+    size = 9.5
+
+    def text(line):
+        return "".join(t for t, _f in line)
+
+    def width(line):
+        return sum(text_len(t, f, size) for t, f in line)
+
+    for width_pt in (120, 200, 300, 600):
+        # runs of one font wrap exactly as their plain text does
+        one_font = wrap_runs([(t, regular) for t, _f in runs], width_pt, size)
+        assert [text(line) for line in one_font] == wrap(plain, width_pt, size, regular)
+
+        got = wrap_runs(runs, width_pt, size)
+        assert " ".join(text(line).rstrip(" ") for line in got) == plain  # broken only between words
+        bold_words = "Auto – Internal Origin to Internal Origin".split(" ")
+        for line in got:
+            for t, f in line:  # each run keeps its font
+                assert all((w in bold_words) == (f == bold) for w in t.split())
+        for k, line in enumerate(got):
+            if " " in text(line).strip():  # a line of one word may be wider than the column
+                assert width(line) <= width_pt
+            if k + 1 < len(got):  # greedy: the next line's first word would not have fitted
+                word = []  # the next line's first word, which may span runs
+                for t, f in got[k + 1]:
+                    word.append((t.split(" ")[0], f))
+                    if " " in t:
+                        break
+                tail_text, tail_font = line[-1]  # the space between words is in the font before it
+                assert width(line[:-1] + [(tail_text + " ", tail_font)] + word) > width_pt
+    first = wrap_runs(runs, 300, size)[0]
     assert first[0] == ("Ensure that Positioning is set to: ", regular) and first[1][1] == bold
 
 
