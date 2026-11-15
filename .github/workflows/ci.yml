@@ -45,6 +45,6 @@ jobs:
       - name: Install (compiles the native extension)
         run: python -m pip install -e ".[dev]"
       - name: The extension loads
-        run: python -c "import rvt_prt._native, rvt-prt; print(rvt_prt.__version__)"
+        run: python -c "import rvt_prt._native, rvt_prt; print(rvt_prt.__version__)"
       - run: mypy
       - run: pytest tests/unit

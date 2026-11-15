@@ -1,6 +1,18 @@
 # Installing
 
-rvt-prt is installed from a clone of its repository. There are no prebuilt packages yet, so one
+Releases built by the release workflow come with prebuilt packages for Linux (x86_64, aarch64)
+and macOS (Apple silicon, Intel), which need no Rust toolchain:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install rvt-prt
+```
+
+Where there is no prebuilt package for a release or a platform, pip compiles it from source,
+which needs the tools below. To work on rvt-prt, or to run the latest code, install from a
+clone as described here.
+
+rvt-prt is installed from a clone of its repository. One
 part of it is **compiled on your machine** the first time you install: the native extension
 `rvt_prt._native`, which wraps [rvt-rs](https://github.com/DrunkOnJava/rvt-rs), a Rust library
 that cargo downloads from crates.io during the build (the `rvt` crate). Expect a few minutes on a desktop and 15 to 30

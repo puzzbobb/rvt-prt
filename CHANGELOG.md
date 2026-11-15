@@ -6,6 +6,15 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Prebuilt wheels for Linux (x86_64, aarch64) and macOS (arm64, x86_64), built and published
+  by a release workflow, so installing a release needs no Rust toolchain.
+
+### Fixed
+
+- CI's check that the extension loads, which was a Python syntax error.
+
 ## [0.1.0] - 2026-11-15
 
 First public release.

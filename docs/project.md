@@ -161,7 +161,9 @@ release (0.2, 0.3) may change the public interface, and the changelog says how.
 3. The changelog is finished, and the version is set in `pyproject.toml` and
    `native/Cargo.toml`.
 4. The commit is tagged `vX.Y.Z`. The packages are built from the tag, checked, published to
-   TestPyPI, installed from there on a clean machine, and then published to PyPI.
+   TestPyPI, installed from there on a clean machine, and then published to PyPI. The
+   release workflow (`.github/workflows/release.yml`) does all of this when the tag is pushed:
+   an abi3 wheel for each of Linux x86_64 and aarch64 and macOS arm64 and x86_64, and the sdist.
 5. A PyPI version cannot be replaced. A mistake is fixed forward, in the next patch release.
 
 ### What is supported
