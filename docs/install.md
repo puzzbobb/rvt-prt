@@ -15,8 +15,8 @@ clone as described here.
 rvt-prt is installed from a clone of its repository. One
 part of it is **compiled on your machine** the first time you install: the native extension
 `rvt_prt._native`, which wraps [rvt-rs](https://github.com/DrunkOnJava/rvt-rs), a Rust library
-that cargo downloads from crates.io during the build (the `rvt` crate). Expect a few minutes on a desktop and 15 to 30
-minutes on a small ARM board.
+that cargo downloads from crates.io during the build (the `rvt` crate). Expect a few minutes: about 5 on a small ARM board (4 cores,
+8 GB), less on a desktop.
 
 It is developed and tested on 64-bit ARM Linux (Debian-based). macOS should work the same way but
 is untested. Windows is untested, and sheets print one at a time there, without the memory guard

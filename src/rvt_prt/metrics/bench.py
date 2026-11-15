@@ -1,4 +1,8 @@
-"""Print timing: per-stage wall times of `cli.py print`, appended to bench/prints.jsonl.
+"""Print timing: per-stage wall times of `cli.py print`, appended to a log in a checkout's bench/.
+
+Every print is appended to bench/prints.local.jsonl, which git ignores, so printing never changes a
+tracked file. With RVT_PRT_BENCH_RECORD=1 the print is appended to bench/prints.jsonl instead, the
+committed record that goes with a change. Comparisons read both.
 
 Each record: when, git commit (and whether the tree had uncommitted changes), model, sheets,
 whether the link mesh caches were warm, stage seconds, total seconds and peak memory. Runs are
@@ -8,12 +12,19 @@ python -m rvt_prt.bench [N]   the last N runs, each against the run before it
 """
 import contextlib
 import json
+import os
 import subprocess
 import sys
 import time
 from ..core import paths
 
-LOG = paths.BENCH / "prints.jsonl" if paths.BENCH else None  # a checkout's only
+LOG = paths.BENCH / "prints.jsonl" if paths.BENCH else None  # a checkout's only: the committed record
+LOCAL = paths.BENCH / "prints.local.jsonl" if paths.BENCH else None  # every other print, untracked
+
+
+def _target():
+    """The log a print is appended to: the committed record only when asked for."""
+    return LOG if os.environ.get("RVT_PRT_BENCH_RECORD") == "1" else LOCAL
 
 
 def _git(*args):
@@ -67,17 +78,21 @@ class Timer:
         }
         if LOG is None:  # installed: no record kept
             return rec, None
-        LOG.parent.mkdir(exist_ok=True)
-        with LOG.open("a") as f:
+        log = _target()
+        log.parent.mkdir(exist_ok=True)
+        with log.open("a") as f:
             f.write(json.dumps(rec) + "\n")
         prev = previous(rec)
         return rec, prev
 
 
 def runs():
-    if LOG is None or not LOG.exists():
-        return []
-    return [json.loads(l) for l in LOG.read_text().splitlines() if l.strip()]
+    """Every logged print, committed and local, oldest first."""
+    out = []
+    for log in (LOG, LOCAL):
+        if log is not None and log.exists():
+            out += [json.loads(l) for l in log.read_text().splitlines() if l.strip()]
+    return sorted(out, key=lambda r: r["when"])
 
 
 def _key(r):

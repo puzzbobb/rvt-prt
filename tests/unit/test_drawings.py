@@ -8,6 +8,11 @@ from rvt_prt.formats import drawing, dwfx
 from rvt_prt.formats.drawing import Block, Drawing, Insert, Prim
 
 
+def _points(expected, abs):
+    """pytest.approx for a list of points (pytest 9 refuses nested structures)."""
+    return [pytest.approx(p, abs=abs) for p in expected]
+
+
 def test_xps_abbreviated_path_data():
     paths, closed = dwfx.parse_data("M 0,0 L 10,0 10,10 Z M 20,0 h 5 v 5")
     assert closed
@@ -46,7 +51,7 @@ def test_dwfx_round_trip_keeps_geometry_groups_and_layers(tmp_path):
     assert d.size == pytest.approx((42.0, 30.0))
     wall = next(p for p in d.prims if p.group == "E619340")
     assert wall.layer == "Walls cut"
-    assert wall.paths[0] == pytest.approx([(1, 1), (5, 1), (5, 4)], abs=0.01)
+    assert [tuple(p) for p in wall.paths[0]] == _points([(1, 1), (5, 1), (5, 4)], abs=0.01)
     assert wall.width == pytest.approx(0.86, abs=0.01)
     assert d.meta["E619340"]["category"] == "Walls"
 
@@ -72,7 +77,7 @@ def test_dxf_round_trip_keeps_blocks_inserts_and_groups(tmp_path):
     assert any(p.group == "E619340" for p in r.prims)
     placed = [p for p in r.flat() if p.group == "E631497"]
     line = next(p for p in placed if p.arc is None)
-    assert line.paths[0] == pytest.approx([(10, 20), (10, 23)], abs=1e-9)
+    assert [tuple(p) for p in line.paths[0]] == _points([(10, 20), (10, 23)], abs=1e-9)
 
 
 def test_clip_cuts_segments_at_the_rectangle():

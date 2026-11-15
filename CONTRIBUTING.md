@@ -59,8 +59,8 @@ output, or run code): report it privately. See [`SECURITY.md`](SECURITY.md).
 ## Setting up
 
 You need Python 3.10 or newer, git, and Rust 1.87 or newer ([rustup](https://rustup.rs)) with a C
-toolchain. The first install compiles rvt-rs: a few minutes on a desktop, 15 to 30 on a
-small ARM board. [Installing](docs/install.md) has the details for each system.
+toolchain. The first install compiles rvt-rs: about 5 minutes on a small ARM board (4 cores, 8 GB), less on a
+desktop. [Installing](docs/install.md) has the details for each system.
 
 ```bash
 git clone https://github.com/puzzbobb/rvt-prt.git
@@ -153,8 +153,9 @@ the same idea.
   iterating.
 - **Compare like with like.** A cold and a warm print draw the same pages. If they do not, that
   is a bug.
-- **Every print in a clone is logged** to `bench/prints.jsonl`. Do not commit log entries from
-  experiments. Commit the record of the change you are sending.
+- **Every print in a clone is logged** to `bench/prints.local.jsonl`, which git ignores. To
+  add the record of the change you are sending to the committed log, `bench/prints.jsonl`,
+  print with `RVT_PRT_BENCH_RECORD=1`.
 
 ## Rules for the code
 
