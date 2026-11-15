@@ -6,7 +6,10 @@ m_vertDir / m_viewDir, m_viewTemplateId, m_isTemplate. A sheet's view (catalogue
 DBViewDrafting) adds m_sheetNumber, m_date, m_drawnBy, m_checkedBy, m_designedBy, m_approvedBy,
 m_issueDate. DBViewPlan adds its view range: m_bottomClipElev, m_columnSymbolElev, m_cutPlaneElev,
 m_levelBelowElev, m_topClipElev (an unlimited plane is stored as 1e9). Visibility/Graphics' hidden
-categories are IckyExcludedCategoriesSetPtrWrapper.m_categoryIds.
+categories are IckyExcludedCategoriesSetPtrWrapper.m_categoryIds. A sheet's project and shared
+parameters are its graph's ParamValueSetAString / ParamValueSetInt m_paramSet entries
+[{m_paramId, m_value}] whose id is a parameter element's (positive; built-in parameters are
+negative): Snowdon's "Sheet Group" and "Sheet Sort" (model/sheetparams.py names them).
 """
 import functools
 from dataclasses import dataclass, field
@@ -33,6 +36,22 @@ class View:
     hidden_categories: frozenset = frozenset()  # Visibility/Graphics: BuiltInCategory ids hidden
     revisions: tuple = ()  # a sheet's m_explicitlyPresentRevisionIds
     scheduled: bool = True  # a sheet's m_bScheduled ("Appears In Sheet List")
+    params: dict = field(default_factory=dict)  # a sheet's {parameter element id: str or int}: its project and shared parameters
+
+
+def _sheet_params(g):
+    """{parameter element id: value} of a sheet's project and shared parameters: strings and
+    integers (Yes/No among them). Numbers with units (ParamValueSetDouble) are left out: their
+    units are not read."""
+    out = {}
+    for o in g.objects:
+        if o.name in ("ParamValueSetAString", "ParamValueSetInt"):
+            for e in o.fields.get("m_paramSet", []):
+                pid = (e.get("m_paramId") or {}).get("m_id", {}).get("m_id64")
+                value = e.get("m_value")
+                if isinstance(pid, int) and pid > 0 and isinstance(value, (str, int)) and not isinstance(value, bool):
+                    out.setdefault(pid, value)
+    return out
 
 
 def _view(eid, g):
@@ -57,7 +76,7 @@ def _view(eid, g):
                 objgraph.ref(f.get("m_dbDrawingId")), f.get("m_scale"), tuple(r for r in map(objgraph.ref, [f.get("m_sheetViewportElemId")] + f.get("m_sheetViewportElemIds", [])) if r),
                 vr, cam, objgraph.ref(f.get("m_viewTemplateId")), bool(f.get("m_isTemplate")), hidden,
                 tuple(objgraph.ref(r) for r in f.get("m_explicitlyPresentRevisionIds", []) if objgraph.ref(r)),
-                f.get("m_bScheduled", True) is not False)
+                f.get("m_bScheduled", True) is not False, _sheet_params(g) if sheet else {})
 
 
 def _read(rf, path):

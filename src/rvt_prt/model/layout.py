@@ -40,6 +40,7 @@ class Sheet:
     view_id: int | None = None  # the sheet's own view (owner of its viewports, schedules and notes)
     drawing_id: int | None = None  # its view's m_dbDrawingId (its viewports' m_dbDrawingId)
     scheduled: bool = True  # "Appears In Sheet List"
+    custom: dict = field(default_factory=dict)  # {parameter element id: value}: views.View.params (sheetparams names them)
     left: float = 0.0  # the paper's left edge, sheet feet: below 0 for a title block drawn left of its origin (_paper)
 
     def as_viewport(self):
@@ -87,7 +88,7 @@ def sheets(rf, path):
                                  view.camera if view else None, vp.show_title, view.template_id if view else None, vp.reflected,
                                  title_family=vp.title_family, title_line=vp.title_line, depth=vp.depth))
         out[sv.sheet["number"]] = Sheet(sv.sheet["number"], sv.name, sv.sheet, None, sorted(placed, key=lambda p: p.detail),
-                                         sv.element_id, sv.drawing_id, sv.scheduled)
+                                         sv.element_id, sv.drawing_id, sv.scheduled, sv.params)
     sheets_ = [out[k] for k in sorted(out)]
     from ..elements import titleblock
     tbs = titleblock.for_sheets(rf, path, sheets_)

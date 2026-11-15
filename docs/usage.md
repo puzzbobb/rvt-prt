@@ -36,6 +36,56 @@ A101   TEST                             42.0 x 30.0 in  viewports: 1 Level 1 - F
 
 A model with no sheets prints nothing on stdout and says so on stderr.
 
+| Option | Meaning |
+|---|---|
+| `--where FILTER` | Only the sheets whose parameters match. Repeat it for several, which must all hold. See [Choosing sheets by their parameters](#choosing-sheets-by-their-parameters) |
+| `--params` | Each sheet's parameters that have a value, a line each under the sheet |
+| `--csv` | Every sheet's parameters as CSV on stdout: a row per sheet, a column per parameter |
+| `--json` | Every sheet as JSON: its number, name, paper size in inches, viewports and parameters |
+
+```bash
+rvt-prt list model.rvt --params
+rvt-prt list model.rvt --csv > sheets.csv
+rvt-prt list model.rvt --json --where "Appears In Sheet List=Yes"
+```
+
+```text
+A101   First Floor Plan                 42.0 x 30.0 in  viewports: 1 L1 (1/8" = 1'-0")
+       Appears In Sheet List: Yes
+       Sheet Issue Date: 08/28/22
+       Drawn By: APF
+       Sheet Group: Architectural
+```
+
+### Choosing sheets by their parameters
+
+`list` and `print` take `--where`, once or several times, to choose sheets by their parameters.
+
+| Filter | A sheet matches when |
+|---|---|
+| `NAME=VALUE` | the parameter is VALUE. `*` stands for any text and `?` for one character: `"Sheet Number=A1*"` |
+| `NAME!=VALUE` | the parameter is anything else |
+| `NAME~TEXT` | the parameter contains TEXT: `"Sheet Name~plan"` |
+
+- **Names** are the parameters' names as Revit shows them. The built-in ones are `Sheet Number`,
+  `Sheet Name`, `Appears In Sheet List`, `Sheet Issue Date`, `Drawn By`, `Checked By`,
+  `Designed By` and `Approved By`. After them come the model's project and shared parameters
+  that hold text, whole numbers or Yes/No (`Sheet Group`, say). `list --params` shows a model's.
+  Parameters that are numbers with units, such as lengths, are not read yet.
+- **Names and values** are compared in any case. A Yes/No parameter is `Yes` or `No`, and
+  `true`, `false`, `1` and `0` mean the same. A parameter a sheet has no value for is empty, so
+  `"Drawn By="` chooses the sheets without one.
+- **A name no sheet parameter has** stops the command with a line listing the names there are,
+  and exit status 1. So does a filter that no sheet matches.
+- Put a filter with spaces in quotes.
+
+```bash
+rvt-prt print model.rvt -o issue.pdf --where "Appears In Sheet List=Yes" --where "Sheet Group=Architectural"
+rvt-prt print model.rvt -o plans --where "Sheet Name~plan" --where "Sheet Number!=SD*"
+```
+
+With `--sheet` as well, a sheet is printed when it is one of those numbered and matches the filters.
+
 ## print
 
 ```bash
@@ -50,6 +100,7 @@ rvt-prt print model.rvt -o plans.pdf --sheet M101 --sheet M102 -j 4
 | `-o`, `--output PATH` | A folder, or a `.pdf` or `.dwfx` file. Default: `out/sheets` (`out/dxf` for DXF) |
 | `-f`, `--format {pdf,dwfx,dxf}` | The output format. Default: from the output's extension, else `pdf` |
 | `--sheet NUMBER` | Print only this sheet. Repeat it for several |
+| `--where FILTER` | Print only the sheets whose parameters match: `"Appears In Sheet List=Yes"`. Repeatable. See [Choosing sheets by their parameters](#choosing-sheets-by-their-parameters) |
 | `-j`, `--jobs N` | Sheets drawn at once, each in a process of its own. Default: the number of CPU cores |
 | `--geometry-jobs N` | Models and links whose caches are built at once on a first print. Default: `RVT_PRT_GEOMETRY_JOBS`, else `0`, which means as many as the cores and free memory allow. `1` builds them one after another in the printing process |
 | `--sheet-timeout SECONDS` | Stop a sheet that takes longer than this to draw. It is drawn again without its sections' model linework, and failing that left blank with a note. Default: `RVT_PRT_SHEET_TIMEOUT`, else no limit |

@@ -50,6 +50,28 @@ names the release, or the build date when the file records no release.
 
 The sheet with that number (for example `"M101"`), or `None`.
 
+### `model.sheet_parameters`
+
+`{sheet number: {parameter name: value}}`: each sheet's parameters as Revit shows them, all as
+strings. The built-in ones come first (`Sheet Number`, `Sheet Name`, `Appears In Sheet List`,
+`Sheet Issue Date`, `Drawn By`, `Checked By`, `Designed By`, `Approved By`), then the model's
+project and shared parameters that hold text, whole numbers or Yes/No, by name. A Yes/No parameter
+is `"Yes"` or `"No"`; one with no value is `""`. Read once and kept.
+
+### `model.select_sheets(where)`
+
+The sheets (`Sheet` objects) whose parameters satisfy every filter in `where`, a list of strings
+written as for `--where` ([Command line](usage.md#choosing-sheets-by-their-parameters)). An empty
+list selects every sheet. Raises `ValueError` for a string that is not a filter, and `LookupError`
+for a name no sheet parameter has.
+
+```python
+issue = model.select_sheets(["Appears In Sheet List=Yes", "Sheet Group=Architectural"])
+model.render_to_pdf("issue.pdf", sheet_numbers=[s.number for s in issue])
+```
+
+Pass `sheet_numbers` only when the list is not empty: an empty list prints every sheet.
+
 ### `model.render_to_pdf(output_path, sheet_numbers=None, workers=None, benchmark=False, geometry_jobs=None)`
 
 Prints sheets to vector PDF.

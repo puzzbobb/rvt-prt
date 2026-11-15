@@ -44,6 +44,22 @@ def _compare(args):
     return 0
 
 
+def _filter(text):
+    from .model import sheetparams
+    try:
+        sheetparams.parse(text)
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(str(e)) from None
+    return text
+
+
+def _where(parser):
+    parser.add_argument("--where", action="append", type=_filter, metavar="FILTER", default=[],
+                        help="only sheets whose parameter matches (repeatable; all must hold): NAME=VALUE "
+                             "(* and ? wildcards), NAME!=VALUE or NAME~TEXT (contains), e.g. "
+                             "--where \"Appears In Sheet List=Yes\" --where \"Sheet Group=Arch*\"")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog="rvt-prt",
@@ -52,8 +68,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     from . import __version__
     ap.add_argument("--version", action="version", version=f"rvt-prt {__version__}")
     sub = ap.add_subparsers(dest="command", required=True)
-    ls = sub.add_parser("list", help="list sheets and their viewports")
+    ls = sub.add_parser("list", help="list sheets and their viewports, or their parameters")
     ls.add_argument("model", help="path to the input .rvt Revit model file")
+    _where(ls)
+    ls.add_argument("--params", action="store_true", help="each sheet's parameters under it, those with a value")
+    lf = ls.add_mutually_exclusive_group()
+    lf.add_argument("--csv", action="store_true", help="every sheet's parameters as CSV, a column per parameter")
+    lf.add_argument("--json", action="store_true", help="every sheet, its viewports and its parameters as JSON")
     pr = sub.add_parser("print", help="print sheets to PDF or DWFx, or their plan views to DXF")
     pr.add_argument("model", help="path to the input .rvt Revit model file")
     pr.add_argument("-o", "--output", default=None,
@@ -63,6 +84,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     pr.add_argument("-f", "--format", choices=["pdf", "dwfx", "dxf"], default=None,
                     help="output format (default: from the output's extension, else pdf)")
     pr.add_argument("--sheet", action="append", dest="sheets", help="sheet number to print (repeatable, e.g. --sheet M101)")
+    _where(pr)
     pr.add_argument("-j", "--jobs", type=int, default=None, help="parallel render worker processes (default cpu_count)")
     pr.add_argument("-q", "--quiet", action="store_true", help="no progress: only warnings and the summary")
     pr.add_argument("--geometry-jobs", type=int, default=None,
@@ -198,14 +220,50 @@ def _model_command(args):
         progress.enable(not args.quiet)
         progress.step(f"opening {args.model}")
     model = RevitModel(args.model)
+    try:
+        chosen = model.select_sheets(args.where)
+    except LookupError as e:  # a parameter name no sheet has
+        print(f"rvt-prt: {e}", file=sys.stderr)
+        return 1
+    if args.where and model.sheets and not chosen:
+        print(f"rvt-prt: no sheet of {args.model} matches " + " and ".join(f'"{w}"' for w in args.where),
+              file=sys.stderr)
+        return 1
 
     if args.command == "list":
         if not model.sheets:
             print(f"rvt-prt: {args.model} has no sheets", file=sys.stderr)
-        for s in model.sheets:
+        params = model.sheet_parameters if args.params or args.csv or args.json else {}
+        if args.csv:
+            import csv
+            columns = list(dict.fromkeys(n for s in chosen for n in params[s.number]))
+            w = csv.writer(sys.stdout, lineterminator="\n")
+            w.writerow(columns)
+            for s in chosen:
+                w.writerow([params[s.number].get(c, "") for c in columns])
+            return 0
+        if args.json:
+            print(json.dumps([{"number": s.number, "name": s.name,
+                               "size_in": [round(s.size[0] * 12, 2), round(s.size[1] * 12, 2)],
+                               "viewports": [{"detail": v.detail, "view": v.view_name, "scale": scale_text(v.scale)}
+                                             for v in s.viewports],
+                               "parameters": params[s.number]} for s in chosen], indent=2, ensure_ascii=False))
+            return 0
+        for s in chosen:
             vps_str = "; ".join(f"{v.detail} {v.view_name} ({scale_text(v.scale)})" for v in s.viewports)
             print(f"{s.number:6} {s.name:32} {s.size[0] * 12:.1f} x {s.size[1] * 12:.1f} in  viewports: {vps_str}")
+            for name, value in params.get(s.number, {}).items():
+                if value and name not in ("Sheet Number", "Sheet Name"):
+                    print(f"       {name}: {value}")
         return 0
+
+    if args.where:  # the sheets the filters chose, of those --sheet names
+        named = args.sheets
+        args.sheets = [s.number for s in chosen if not named or s.number in named]
+        if not args.sheets:  # never an empty list passed on: that would print every sheet
+            print(f"rvt-prt: no sheet of {args.model} numbered {', '.join(named or [])} matches "
+                  + " and ".join(f'"{w}"' for w in args.where), file=sys.stderr)
+            return 1
 
     fmt = args.format or (args.output.rsplit(".", 1)[-1].lower() if args.output and args.output.lower().endswith((".pdf", ".dwfx")) else "pdf")
     output = args.output or {"pdf": "out/sheets", "dwfx": "out/sheets", "dxf": "out/dxf"}[fmt]

@@ -208,6 +208,7 @@ again.
 | `model/views.py` | Views, sheets, view ranges, templates, hidden categories, detail level |
 | `model/viewports.py` | Viewport placement, crop boxes, view basis and origins; sections' and elevations' frames; viewport types' title settings |
 | `model/layout.py` | Sheet assembly: paper sizes, placed viewports, title block labels |
+| `model/sheetparams.py` | A sheet's parameters by name, and the `--where` filters that select sheets by them |
 | `model/pens.py` | Line weights, Object Styles, line styles' pens, colours and patterns |
 | `model/phases.py` | Which elements a view shows, by the phase they were created and demolished in |
 | `model/filters.py` | View filters and their visibility rules |
