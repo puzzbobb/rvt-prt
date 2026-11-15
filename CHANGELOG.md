@@ -8,6 +8,11 @@ All notable changes are listed here. The format follows
 
 ### Added
 
+- Sheet parameters: `rvt-prt list --params`, `--csv` and `--json` show each sheet's built-in
+  parameters (Appears In Sheet List, Sheet Issue Date, Drawn By, ...) and its project and shared
+  ones (text, whole numbers, Yes/No). `--where NAME=VALUE` (also `!=` and `~` for contains, `*`
+  and `?` wildcards) chooses the sheets `list` shows and `print` prints. In Python:
+  `RevitModel.sheet_parameters` and `RevitModel.select_sheets`.
 - Prebuilt wheels for Linux (x86_64, aarch64) and macOS (arm64, x86_64), built and published
   by a release workflow, so installing a release needs no Rust toolchain.
 

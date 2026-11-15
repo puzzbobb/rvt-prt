@@ -112,6 +112,7 @@ class RevitModel:
         self.path = str(path)
         self.rf = _open(self.path)
         self._sheets: list[layout.Sheet] | None = None
+        self._params: dict[str, dict[str, str]] | None = None
 
     @property
     def sheets(self) -> list[layout.Sheet]:
@@ -139,6 +140,26 @@ class RevitModel:
             if s.number == sheet_number:
                 return s
         return None
+
+    @property
+    def sheet_parameters(self) -> dict[str, dict[str, str]]:
+        """{sheet number: {parameter name: value}}: each sheet's built-in parameters (Sheet Number,
+        Appears In Sheet List, Drawn By, ...), then its project and shared ones, as Revit shows them."""
+        if self._params is None:
+            from .model import sheetparams
+            defs = sheetparams.definitions(self.path)
+            self._params = {s.number: sheetparams.of(s, defs) for s in self.sheets}
+        return self._params
+
+    def select_sheets(self, where: Sequence[str]) -> list[layout.Sheet]:
+        """The sheets whose parameters satisfy every filter in `where`: "NAME=VALUE" (* and ? as
+        wildcards), "NAME!=VALUE" or "NAME~TEXT" (contains), names and values in any case. Raises
+        ValueError for a filter that is not one, and LookupError for a name no sheet parameter has."""
+        from .model import sheetparams
+        if not where:
+            return list(self.sheets)
+        known = sheetparams.BUILT_IN + tuple(n for n, _k in sheetparams.definitions(self.path).values())
+        return sheetparams.select(self.sheets, self.sheet_parameters, where, known)
 
     def render_to_pdf(
         self,
