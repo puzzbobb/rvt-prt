@@ -28,10 +28,11 @@ CACHE = paths.CACHE / "links"
 # (rvt_prt._native). A cache from another backend (the retired "ifc": ifcopenshell's
 # tessellation of rvt-rs's IFC export) is stale.
 BACKEND = "native"
-# what the .npz holds, recorded in it: 3, the system elements only (family instances: _family_items),
-# those demolished before the project's last phase included (_earlier_phases); a cache of an
-# earlier format (2: the last phase's only; 1: rvt-rs's family boxes too) is stale
-FORMAT = 3
+# what the .npz holds, recorded in it: 4, the system elements only (family instances: _family_items),
+# those demolished before the project's last phase included (_earlier_phases), model text as its
+# letters (_model_text); a cache of an earlier format (3: model text as rvt-rs's box; 2: the last
+# phase's only; 1: rvt-rs's family boxes too) is stale
+FORMAT = 4
 SHARP = np.cos(np.radians(30))
 # classes left out of plans: none by default (what a view hides is its visibility settings);
 # LINK_SKIP in the environment adds some, for experiments
@@ -96,7 +97,7 @@ def meshes(link):
     else:
         from ..elements import families
         placed = families.instance_transforms(src)
-        out = [i for i in _native_items(src, gelements.categories(src)) if i.tag not in placed]
+        out = _model_text(src, [i for i in _native_items(src, gelements.categories(src)) if i.tag not in placed])
     _save(npz, out)
     # read back as a warm print reads it: as meshed, Snowdon Architectural's items held 1.0 GB,
     # read back 0.16 GB
@@ -389,6 +390,46 @@ def _native_items(src, category):
             for cls, tag, fam, mat, m, (v0, v1, f0, f1)
             in zip(d["classes"], d["tags"], d["families"], d["materials"], mtx, index)
             if cls not in SKIP and f1 > f0]
+
+
+def _model_text(src, items):
+    """`items` with each model text (Text3dElem) as its letters. rvt-rs writes model text as a box
+    (IfcBuildingElementProxy, 12 triangles): the extent of the panel its saved graphics hold besides
+    the letters (a solid in no graphics style), so a plan or section drew a rectangle where Revit
+    draws the text. Its saved graphics' solids in a graphics style (Generic Models: the letters;
+    Snowdon Architectural's 7, Site's 1) replace it, vertices welded so that only the letters'
+    outlines are sharp edges. One rvt-rs left out (its phase) stays out; one whose graphics give no
+    letters keeps its box."""
+    from ..core import objgraph
+    from ..elements import savedgraphics
+    from ..model import pens
+    tags = set(objgraph._class_index(str(src)).get("Text3dElem", ())) & {i.tag for i in items}
+    if not tags:
+        return items
+    link = savedgraphics.Link(src)
+    styles = pens.style_categories(str(src))
+    out = []
+    for i in items:
+        if i.tag in tags:
+            letters = [(p.category, m) for p in link.primitives(i.tag)
+                       if p.kind == "solid" and p.category in styles and (m := link.solid_mesh(p)) is not None]
+            if letters:
+                v, f = _welded([m for _, m in letters])
+                i = i._replace(cls="IfcBuildingElementProxy", verts=v, faces=f, materials="",
+                               category=styles[letters[0][0]][0])
+        out.append(i)
+    return out
+
+
+def _welded(meshes, tol=1e-6):
+    """One mesh of [(verts, faces)], vertices within `tol` ft shared and collapsed triangles dropped."""
+    v = np.vstack([m[0] for m in meshes])
+    offs = np.cumsum([0] + [len(m[0]) for m in meshes[:-1]])
+    f = np.vstack([m[1] + o for m, o in zip(meshes, offs)])
+    key, first, inv = np.unique(np.round(v / tol).astype(np.int64), axis=0, return_index=True, return_inverse=True)
+    f = inv.reshape(-1)[f]
+    f = f[(f[:, 0] != f[:, 1]) & (f[:, 1] != f[:, 2]) & (f[:, 2] != f[:, 0])]
+    return v[first], f.astype(np.int32)
 
 
 def _instance_family_names(src):
