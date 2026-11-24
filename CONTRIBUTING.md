@@ -76,7 +76,7 @@ What you have after that:
 |---|---|
 | `src/rvt_prt/` | The package. [How it works](docs/how-it-works.md) maps it |
 | `native/src/` | The Rust extension that calls rvt-rs |
-| `native/Cargo.toml` | The extension's dependencies, rvt-rs among them: the `rvt` crate, pinned to one release (`rvt = "=0.24.0"`) |
+| `native/Cargo.toml` | The extension's dependencies, rvt-rs among them: the `rvt` crate, pinned to one release (`rvt = "=0.25.0"`) |
 | `tests/unit/` | Tests on synthetic data |
 | `tests/integration/` | Tests on real models, skipped when the files are absent |
 | `docs/` | Documentation |
@@ -309,9 +309,9 @@ rvt-prt uses it as published.
   carries no patches to it.
 - What rvt-prt needs differently is adapted on this side: in `native/src/`, or in the Python
   decoders.
-- `native/Cargo.toml` pins one rvt-rs release from crates.io, exactly (`rvt = "=0.24.0"`):
+- `native/Cargo.toml` pins one rvt-rs release from crates.io, exactly (`rvt = "=0.25.0"`):
   rvt-rs is 0.x, and a minor release may change the API the extension uses. Moving the pin is a
-  change like any other, and is measured: `python -m rvt_prt.metrics.rvtrs all pinned 0.25.0`
+  change like any other, and is measured: `python -m rvt_prt.metrics.rvtrs all pinned 0.26.0`
   meshes the reference models with both releases and compares them element by element
   (`bench/rvtrs.md`). An unreleased rvt-rs commit can be measured the same way (`... all pinned
   main`), but the pin moves only to a release.

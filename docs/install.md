@@ -139,6 +139,6 @@ decoder rebuilds that decoder's caches on the next print, which is slow once.
 ## About rvt-rs
 
 rvt-rs is a separate project, used as published. `native/Cargo.toml` pins one release of its
-`rvt` crate on crates.io (`rvt = "=0.24.0"`), unpatched, and `native/Cargo.lock` the versions of
+`rvt` crate on crates.io (`rvt = "=0.25.0"`), unpatched, and `native/Cargo.lock` the versions of
 everything it needs. Changes to rvt-rs go to rvt-rs itself.
 The integration lives in this repository, in `native/src/`.

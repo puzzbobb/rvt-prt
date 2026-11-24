@@ -16,6 +16,12 @@ All notable changes are listed here. The format follows
 - Prebuilt wheels for Linux (x86_64, aarch64) and macOS (arm64, x86_64), built and published
   by a release workflow, so installing a release needs no Rust toolchain.
 
+### Changed
+
+- rvt-rs 0.25.0 (`rvt = "=0.25.0"`, from 0.24.0). Snowdon's 7 models mesh to the same elements,
+  triangles, boxes and volumes; 17 stair landings of the Architectural link now carry their
+  family name (Non-Monolithic Landing). `bench/rvtrs.md` has the comparison.
+
 ### Fixed
 
 - CI's check that the extension loads, which was a Python syntax error.
